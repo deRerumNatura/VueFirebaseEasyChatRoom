@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <script src="https://www.gstatic.com/firebasejs/4.12.1/firebase.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/css/bootstrap.min.css" integrity="sha384-9gVQ4dYFwwWSjIDZnLEWnxCjeSWFphJiwGPXr1jddIhOegiu1FwO5qRGvFXOdJZ4"
+        crossorigin="anonymous">
+</head>
+
+<body>
+    <div id="chat" class="container">
+        <h1>Vue Firebase chat</h1>
+
+        <div v-for="message in messages" class="card">
+            <div class="card-body">
+
+                <h6 class="card-subtitle mb-2 text-muted"> {{ message.nickname }} </h6>
+
+                <p v-if="message !== editingMessage" class="card-text">{{ message.text }}</p>
+
+                <textarea v-else v-model="messageText" class="form-control"></textarea>
+
+                <div v-if="message !== editingMessage">
+                    <a @click.prevent="deleteMessage(message)" href="#" class="card-link">Delete</a>
+                    <a @click.prevent="editMessage(message)" href="#" class="card-link">Edit</a>
+                </div>
+                <div v-else>
+                    <a @click.prevent="cancelEditing" href="#" class="card-link">Cancel</a>
+                    <a @click.prevent="updateMessage(message)" href="#" class="card-link">Update</a>
+                </div>
+
+            </div>
+        </div>
+
+        <hr>
+
+        <form v-if="!editingMessage" @submit.prevent="storeMessage">
+
+            <div class="form-group">
+                <label>Message:</label>
+                <textarea v-model="messageText" class="form-control"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Nickname:</label>
+                <input v-model="nickname" class="form-control"></input>
+            </div>
+
+            <button class="btn btn-primary">Send</button>
+
+        </form>
+    </div>
+
+    <script type="text/javascript">
+
+        const config = {
+            apiKey: "AIzaSyDtM54M-2Hklg0qEwnELNeO1DbI5C_VpIs",
+            authDomain: "vuefirebase-3dc81.firebaseapp.com",
+            databaseURL: "https://vuefirebase-3dc81.firebaseio.com",
+            projectId: "vuefirebase-3dc81",
+            storageBucket: "vuefirebase-3dc81.appspot.com",
+            messagingSenderId: "854214047054"
+        };
+        firebase.initializeApp(config);
+
+        const database = firebase.database();
+        const messagesRef = database.ref('messages');
+
+        new Vue({
+            el: "#chat",
+
+            data: {
+                messages: [],
+                messageText: '',
+                nickname: 'hootlex',
+                editingMessage: null
+            },
+
+            methods: {
+                storeMessage() {
+                    messagesRef.push().set({ text: this.messageText, nickname: this.nickname });
+                    this.messageText = ''
+                },
+
+                deleteMessage(message) {
+                    messagesRef.child(message.id).remove();
+                },
+
+                editMessage(message) {
+                    this.editingMessage = message;
+                    this.messageText = message.text;
+                },
+
+                cancelEditing() {
+                    this.editingMessage = null,
+                        this.messageText = ''
+                },
+
+                updateMessage() {
+                    messagesRef.child(this.editingMessage.id).update({ text: this.messageText }),
+                        this.cancelEditing()
+                }
+            },
+
+            created() {
+                messagesRef.on('child_added', snapshot => this.messages.push({ ...snapshot.val(), id: snapshot.key })),
+                    messagesRef.on('child_removed', snapshot => {
+
+                        const deleteMessage = this.messages.find(message => message.id === snapshot.key);
+                        const index = this.messages.indexOf(deleteMessage);
+                        this.messages.splice(index, 1);
+
+                    }),
+                    messagesRef.on('child_changed', snapshot => {
+
+                        const updatedMessage = this.messages.find(message => message.id === snapshot.key)
+                        updatedMessage.text = snapshot.val().text
+
+                    })
+            }
+        })
+    </script>
+
+</body>
+
+</html>
